@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:todo_list/models/todo.dart';
 import 'package:todo_list/pages/widgets/todo_list_item.dart';
+import 'package:todo_list/repositories/todo_repository.dart';
 
 class TodoListPage extends StatefulWidget {
   TodoListPage({Key? key}) : super(key: key);
@@ -11,10 +12,30 @@ class TodoListPage extends StatefulWidget {
 
 class _TodoListPageState extends State<TodoListPage> {
   final TextEditingController todoController = TextEditingController();
+  final TodoRepository todoRepository = TodoRepository();
 
   List<Todo> todos = [];
+  String? errorText;
+
+  @override
+  void initState() {
+    super.initState();
+
+    todoRepository.getTodoList().then((value) {
+      setState(() {
+        todos = value;
+      });
+    });
+  }
 
   void onAddTodo() {
+    if (todoController.text.isEmpty) {
+      setState(() {
+        errorText = 'Campo obrigatório';
+      });
+      return;
+    }
+
     Todo newTodo = Todo(
       title: todoController.text,
       dateTime: DateTime.now(),
@@ -25,6 +46,8 @@ class _TodoListPageState extends State<TodoListPage> {
     });
 
     todoController.clear();
+    todoRepository.saveTodoList(todos);
+    errorText = null;
   }
 
   void onDelete(Todo todo) {
@@ -33,6 +56,7 @@ class _TodoListPageState extends State<TodoListPage> {
     setState(() {
       todos.remove(todo);
     });
+    todoRepository.saveTodoList(todos);
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +74,7 @@ class _TodoListPageState extends State<TodoListPage> {
             setState(() {
               todos.insert(todoIndex, todo);
             });
+            todoRepository.saveTodoList(todos);
           },
         ),
         duration: const Duration(seconds: 5),
@@ -77,6 +102,7 @@ class _TodoListPageState extends State<TodoListPage> {
               setState(() {
                 todos.clear();
               });
+              todoRepository.saveTodoList(todos);
             },
             style: TextButton.styleFrom(
               primary: Colors.red,
@@ -107,9 +133,11 @@ class _TodoListPageState extends State<TodoListPage> {
                         },
                         controller: todoController,
                         decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: 'Adicione uma tarefa',
-                            hintText: 'Estudar Flutter'),
+                          border: OutlineInputBorder(),
+                          labelText: 'Adicione uma tarefa',
+                          hintText: 'Estudar Flutter',
+                          errorText: errorText,
+                        ),
                       ),
                     ),
                     SizedBox(
